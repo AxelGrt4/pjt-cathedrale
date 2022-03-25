@@ -1,0 +1,416 @@
+<html>
+	<head>
+		<title>Transept de la cathédrale d'Amiens</title>
+		<meta charset="utf-8">
+		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+	</head>
+
+	<body>
+
+		<style>
+			html, body{
+ 				Height: 100%;
+ 				width: 100%;
+			}
+			body{
+ 				overflow: hidden;
+  				margin: 0;
+			}
+			</style>
+		<script type="importmap">
+			{
+				"imports": {"three": "../Libs/three.module.js"}
+			}
+		</script>
+
+		<script type="module">
+            import * as THREE from 'three';
+            import { OBJLoader } from '../Libs/OBJLoader.js';
+			var container; 
+            
+			//decor
+			var camera, scene, rendu, PointLight;
+			const limXn = -5.5;
+			const limXp = 5.5;
+			const limYn = -10.5;
+			const limYp = 10.5;
+			const limZn = -21;
+			const limZp = 21;
+			var audioAmbiance = new Audio("audio/ambiance.mp3");
+			var audioChenille = new Audio("audio/chenille.mp3")
+
+
+			//joueur
+			var vitesseDeplacement=0.03;
+			var vitesseRotation = 0.02;
+
+			//indices
+			var mesh1,meshDS,meshProjet,meshStage,meshChenille, meshFin;
+			var text1,textDS,textProjet,textStage,textChenille,textFin;
+			var indDS = false, indProjet = false, indStage = false;
+
+			//multi input
+			var keysPressed = {};
+
+			function onWindowResize() {
+              camera.aspect = window.innerWidth / window.innerHeight;
+				camera.updateProjectionMatrix();
+				rendu.setSize( window.innerWidth, window.innerHeight );
+			}
+
+			function Init() {
+				container = document.createElement( 'div' );
+				document.body.appendChild( container );
+
+				//Camera principal
+				camera = new THREE.PerspectiveCamera(100, window.innerWidth / window.innerHeight, 0.1, 100 );
+                camera.castShadow=false;
+				camera.rotation.z=ToRadians(90);
+                camera.rotation.x=ToRadians(360);
+                camera.rotation.y=ToRadians(90);
+                camera.position.z=-20;
+				camera.position.x=0;
+				camera.position.y=0;
+				
+				// scene
+				scene = new THREE.Scene();
+
+				var ambient = new THREE.AmbientLight( 0x6b6b6b, .5);
+				scene.add( ambient );
+
+				//Torche
+				PointLight = new THREE.PointLight(0xcf7c34, 10, 5, 1.5);
+				PointLight.position.copy(camera.position);
+				scene.add(PointLight);
+
+				//construction des cubes
+				
+				//Cube 1 début du jeu
+				var GCubeDeb = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+				var MCubeDeb = new THREE.MeshPhongMaterial({
+					ambient: 0x000000,
+					color : 0xFF0000, 
+					opacity: 0.55,
+					specular:0x555555,
+					shininess:20, 
+					transparent: true });
+
+				mesh1 = new THREE.Mesh(GCubeDeb, MCubeDeb);
+
+				mesh1.position.x=6;
+				mesh1.position.y=-1.75;
+				mesh1.position.z=-20.5;
+				scene.add( mesh1 );
+
+				//Zone de texte à la découverte d'un indice
+				text1 = document.createElement('div');
+				text1.style.position = 'absolute';
+				text1.style.backgroundColor = "#00000069";
+				text1.innerHTML = "Vous avez trouvé Robert ! <br> Robert est à la recherche de son DUT, aidez-le à le trouver en cherchant différents indices dans la Cathédrale !";//changer le texte
+				text1.style.color = "red";
+				text1.style.textAlign = "center";
+				text1.style.fontSize = 30 + "px"
+				text1.style.top = "35%";
+				text1.style.bottom = "35%";
+				text1.style.right = "35%";
+				text1.style.left = "35%";
+				document.body.appendChild(text1);
+
+				//cubes d'indices
+				var GCubeInd = new THREE.BoxGeometry(0.3,0.3,0.3)
+				var MCubeInd = new THREE.MeshPhongMaterial({
+					ambient: 0x000000,
+					color: 0x9eed15,
+					opacity: 0.55,
+					specular: 0.555555,
+					shininess: 20,
+					transparent: true
+				});
+				
+				//Indice DS
+				meshDS = new THREE.Mesh(GCubeInd, MCubeInd);
+				meshDS.position.x=0;    
+    			meshDS.position.y=-11.5;
+    			meshDS.position.z=-19.5;
+
+				textDS = document.createElement('div');
+				textDS.style.position = 'absolute';
+				textDS.style.backgroundColor = "#00000069";
+				textDS.innerHTML = "Vous avez trouvé un DS sur l'autel ! <br> Après l'avoir accompli, Robert est un pas plus proche d'obtenir son DUT ! <br> Trouvez les indices restants !";
+				textDS.style.color = "red";
+				textDS.style.textAlign = "center";
+				textDS.style.fontSize = 30 + "px"
+				textDS.style.top = "35%";
+				textDS.style.bottom = "35%";
+				textDS.style.right = "35%";
+				textDS.style.left = "35%";
+				document.body.appendChild(textDS);
+
+				//Indice Projet
+				meshProjet = new THREE.Mesh(GCubeInd, MCubeInd);
+				meshProjet.position.x = -5;
+				meshProjet.position.y = 10;
+				meshProjet.position.z = -22;
+
+				textProjet = document.createElement('div');
+				textProjet.style.position = 'absolute';
+				textProjet.style.backgroundColor = "#00000069";
+				textProjet.innerHTML = "Vous venez de récupérer un projet à terre ! <br> Robert doit le faire au plus vite pour le rendre dans les temps ! <br> Trouvez les indices restants !";
+				textProjet.style.color = "red";
+				textProjet.style.textAlign = "center";
+				textProjet.style.fontSize = 30 + "px"
+				textProjet.style.top = "35%";
+				textProjet.style.bottom = "35%";
+				textProjet.style.right = "35%";
+				textProjet.style.left = "35%";
+				document.body.appendChild(textProjet);
+
+				//Indice Stage
+				
+				meshStage = new THREE.Mesh(GCubeInd, MCubeInd);
+				meshStage.position.x = -6;
+				meshStage.position.y = -2.55;
+				meshStage.position.z = -18.5;
+
+				textStage = document.createElement('div');
+				textStage.style.position = 'absolute';
+				textStage.style.backgroundColor = "#00000069";
+				textStage.innerHTML = "Vous avez enfin trouvé un stage ! <br> Robert obtiendra bientôt son DUT ! <br> Trouvez les indices restants !";
+				textStage.style.color = "red";
+				textStage.style.textAlign = "center";
+				textStage.style.fontSize = 30 + "px"
+				textStage.style.top = "35%";
+				textStage.style.bottom = "35%";
+				textStage.style.right = "35%";
+				textStage.style.left = "35%";
+				document.body.appendChild(textStage);
+
+				//cube chenille
+				var GCubeCh = new THREE.BoxGeometry(1.5,0.3,0.3)
+				var MCubeCh = new THREE.MeshPhongMaterial({
+					ambient: 0x000000,
+					color: 0x9eed15,
+					opacity: 0.55,
+					specular: 0.555555,
+					shininess: 20,
+					transparent: true
+				});
+
+				meshChenille = new THREE.Mesh(GCubeCh, MCubeCh);
+				meshChenille.position.x = 5;
+				meshChenille.position.y = 10;
+				meshChenille.position.z = -22;
+
+				textChenille = document.createElement('div');
+				textChenille.style.position = 'absolute';
+				textChenille.style.backgroundColor = "#00000069";
+				textChenille.innerHTML = "Vous avez trouvé une chenille ? <br> Qu'est-ce qu'elle fait là ? <br> une chose est sûre, elle ne fait pas partie de l'histoire.";
+				textChenille.style.color = "red";
+				textChenille.style.textAlign = "center";
+				textChenille.style.fontSize = 30 + "px"
+				textChenille.style.top = "35%";
+				textChenille.style.bottom = "35%";
+				textChenille.style.right = "35%";
+				textChenille.style.left = "35%";
+				document.body.appendChild(textChenille);
+
+				//Indice final
+				meshFin = new THREE.Mesh(GCubeDeb, MCubeDeb);
+				meshFin.position.x = 0;
+				meshFin.position.y = 0;
+				meshFin.position.z = -21;
+
+				textFin = document.createElement('div');
+				textFin.style.position = 'absolute';
+				textFin.style.backgroundColor = "#00000069";
+				textFin.innerHTML = "Robert n'a malheuresement pas assuré pendant son stage. <br> Il n'obtient donc pas son DUT !";
+				textFin.style.color = "red";
+				textFin.style.textAlign = "center";
+				textFin.style.fontSize = 30 + "px"
+				textFin.style.top = "35%";
+				textFin.style.bottom = "35%";
+				textFin.style.right = "35%";
+				textFin.style.left = "35%";
+				document.body.appendChild(textFin);
+
+
+				// texture
+				var manager = new THREE.LoadingManager();
+				manager.onProgress = function ( item, loaded, total ) {
+					console.log( item, loaded, total );
+				};
+
+				var texture = new THREE.Texture();
+
+				var tempo = new THREE.ImageLoader( manager );
+				tempo.load( '../TranseptSud/TranseptTexture4096.jpg', function ( image ) {
+					texture.image = image;
+					texture.needsUpdate = true;
+				} );
+               
+				// Chargement du modèle
+				var tempo = new OBJLoader( manager );
+				tempo.load( '../TranseptSud/transeptSudBox.obj', function (object) {
+					object.traverse( function ( child ) {
+						if ( child instanceof THREE.Mesh ) {
+							child.material.map = texture;
+						}
+					} );
+					scene.add( object );
+				} );
+              rendu = new THREE.WebGLRenderer();
+              rendu.setSize( window.innerWidth, window.innerHeight );
+              container.appendChild( rendu.domElement );
+              window.addEventListener( 'resize', onWindowResize, false );
+
+
+			  	
+				//ecoute des events clavier
+				document.addEventListener('keydown', (event) => {
+   					keysPressed[event.key] = true;
+					//Gestion de la musique d'ambiance
+					//La musique doit se déclencher lors du déplacement. Elle ne peut pas se déclencher automatiquement au lancement de la page
+
+					audioAmbiance.volume = 0.7;
+					audioAmbiance.play();
+					document.addEventListener('ended', function (){        //Relancer la musique à la fin de celle ci
+						audioAmbiance.src="audio/ambiance.mp3";
+						audioAmbiance.pause();
+						audioAmbiance.load();
+						audioAmbiance.play();
+					})
+				});
+
+				document.addEventListener('keyup', (event) => {
+   					delete keysPressed[event.key];
+				});
+			  
+			}
+			
+			function Afficher() {
+                rendu.render(scene, camera);
+			}
+
+
+			function Animer() {
+
+				//rotation de la camera
+				if(keysPressed['ArrowLeft']) { camera.rotateOnWorldAxis(new THREE.Vector3(0,0,1), vitesseRotation); }   //rotation gauche
+				if(keysPressed['ArrowRight']) { camera.rotateOnWorldAxis(new THREE.Vector3(0,0,-1), vitesseRotation); }  //rotation droite
+				if(keysPressed['ArrowUp']) { camera.rotateOnAxis(new THREE.Vector3(1,0,0), vitesseRotation); }  //rotation bas
+				if(keysPressed['ArrowDown']) { camera.rotateOnAxis(new THREE.Vector3(-1,0,0), vitesseRotation); }  //rotation haut
+				
+				
+				//Déplacement de la caméra
+				if(keysPressed['z']) { camera.translateZ(-vitesseDeplacement); }
+				if(keysPressed['s']) { camera.translateZ(vitesseDeplacement); }
+				if(keysPressed['q']) { camera.translateX(-vitesseDeplacement); }
+				if(keysPressed['d']) { camera.translateX(vitesseDeplacement); }
+				PointLight.position.copy(camera.position);
+
+				//Limitation des déplacement dans la cathédrale
+				if (camera.position.x < limXn) {
+        			camera.position.x = limXn;
+    			}
+				if (camera.position.x > limXp) {
+					camera.position.x = limXp;
+				}
+				if (camera.position.y < limYn) {
+					camera.position.y = limYn;
+				}
+				if (camera.position.y > limYp) {
+					camera.position.y = limYp;
+				}
+				if (camera.position.z < limZn) {
+					camera.position.z = limZn;
+				}
+				if (camera.position.z > limZp) {
+					camera.position.z = limZp;
+				}
+
+				if(camera.position.distanceTo(mesh1.position)<1.5){
+					text1.style.display = "block";
+				}else{
+					text1.style.display = "none";
+				}
+
+				//Affichage de l'indice DS
+				if(camera.position.distanceTo(meshDS.position) > 3){  //Cache l'objet mesh quand on s'éloigne de celui-ci
+					scene.remove(meshDS);
+				} else {
+					scene.add(meshDS);
+				}
+				if(camera.position.distanceTo(meshDS.position)< 1.5){
+					textDS.style.display = "block";                   //Affiche le bloc de texte défini dans init
+					indDS = true;
+				} else {
+					textDS.style.display = "none";
+				}
+
+
+				//Affichage de l'indice projet
+				if(camera.position.distanceTo(meshProjet.position) > 3){
+					scene.remove(meshProjet);
+				} else {
+					scene.add(meshProjet);
+				}
+				if(camera.position.distanceTo(meshProjet.position)< 1.5){
+					textProjet.style.display = "block";
+					indProjet = true;
+				} else {
+					textProjet.style.display = "none";
+				}
+
+				//Affichage de l'indice Stage
+				if(camera.position.distanceTo(meshStage.position) > 3){
+					scene.remove(meshStage);
+				} else {
+					scene.add(meshStage);
+				}
+				if(camera.position.distanceTo(meshStage.position)< 1.5){
+					textStage.style.display = "block";
+					indStage = true;
+				} else {
+					textStage.style.display = "none";
+				}
+
+				//Affichage de l'indice Chenille
+				if(camera.position.distanceTo(meshChenille.position) > 3){
+					scene.remove(meshChenille);
+				} else {
+					scene.add(meshChenille);
+				}
+				if(camera.position.distanceTo(meshChenille.position)< 1.5){
+					textChenille.style.display = "block";
+					audioAmbiance.pause();
+					audioChenille.volume = 0.2;
+					audioChenille.play();
+				} else {
+					textChenille.style.display = "none";
+				}
+
+
+				//Si tous les indices ont été découverts, on affiche l'indice final
+				if((indDS && indProjet && indStage)){
+					scene.add(meshFin);
+				}
+				if(camera.position.distanceTo(meshFin.position)< 1.5 && (indDS && indProjet && indStage)){
+					textFin.style.display = "block";
+				} else {
+					textFin.style.display = "none";
+				}
+				requestAnimationFrame(Animer);
+				Afficher();
+			}
+
+           Init();
+           Animer();
+
+		   function ToRadians(degrees)
+			{
+  				var pi = Math.PI;
+  				return degrees * (pi/180);
+			}
+		</script>
+	</body>
+</html>
